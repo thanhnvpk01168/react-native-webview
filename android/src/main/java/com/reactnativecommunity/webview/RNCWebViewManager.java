@@ -4,11 +4,11 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import java.lang.IllegalArgumentException;
 import android.Manifest;
 import android.net.http.SslError;
 import android.net.Uri;
@@ -17,6 +17,7 @@ import android.os.Environment;
 import android.os.Message;
 import android.os.SystemClock;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -40,10 +41,12 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.util.Pair;
 
 import com.facebook.common.logging.FLog;
@@ -83,11 +86,17 @@ import com.reactnativecommunity.webview.events.TopRenderProcessGoneEvent;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -184,13 +193,13 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     settings.setDomStorageEnabled(true);
     settings.setSupportMultipleWindows(true);
 
-    settings.setAllowFileAccess(false);
-    settings.setAllowContentAccess(false);
+    settings.setAllowFileAccess(true);
+    settings.setAllowContentAccess(true);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-      settings.setAllowFileAccessFromFileURLs(false);
-      setAllowUniversalAccessFromFileURLs(webView, false);
+      settings.setAllowFileAccessFromFileURLs(true);
+      setAllowUniversalAccessFromFileURLs(webView, true);
     }
-    setMixedContentMode(webView, "never");
+    setMixedContentMode(webView, "always");
 
     // Fixes broken full-screen modals/galleries due to body height being 0.
     webView.setLayoutParams(
@@ -200,46 +209,47 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     if (ReactBuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       WebView.setWebContentsDebuggingEnabled(true);
     }
-
+    webView.addJavascriptInterface(new JavaScriptInterface(reactContext), "Android");
     webView.setDownloadListener(new DownloadListener() {
       public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
-        webView.setIgnoreErrFailedForThisURL(url);
-
-        RNCWebViewModule module = getModule(reactContext);
-
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-        
-        String fileName = URLUtil.guessFileName(url, contentDisposition, mimetype);
-          String downloadMessage = "Downloading " + fileName;
-
-          //Attempt to add cookie, if it exists
-          URL urlObj = null;
-          try {
-            urlObj = new URL(url);
-            String baseUrl = urlObj.getProtocol() + "://" + urlObj.getHost();
-            String cookie = CookieManager.getInstance().getCookie(baseUrl);
-            request.addRequestHeader("Cookie", cookie);
-          } catch (MalformedURLException e) {
-            System.out.println("Error getting cookie for DownloadManager: " + e.toString());
-            e.printStackTrace();
-          }
-
-        //Finish setting up request
-          request.addRequestHeader("User-Agent", userAgent);
-          request.setTitle(fileName);
-          request.setDescription(downloadMessage);
-          request.allowScanningByMediaScanner();
-          request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-          request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-
-        module.setDownloadRequest(request);
-
-        if (module.grantFileDownloaderPermissions()) {
-            module.downloadFile();
-          }
-        } catch (IllegalArgumentException e) {
-          System.out.println("IllegalArgumentException: " + e.toString());
-        }		
+        Toast.makeText(reactContext, "download", Toast.LENGTH_SHORT).show();
+       // String base64Blob = JavaScriptInterface.getBase64StringFromBlobUrl(url);
+        webView.loadUrl(JavaScriptInterface.getBase64StringFromBlobUrl(url));
+        //Toast.makeText(reactContext, base64Blob, Toast.LENGTH_SHORT).show();
+//        webView.setIgnoreErrFailedForThisURL(url);
+//
+//        RNCWebViewModule module = getModule(reactContext);
+//
+//        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+//
+//        String fileName = URLUtil.guessFileName(url, contentDisposition, mimetype);
+//        String downloadMessage = "Downloading " + fileName;
+//
+//        //Attempt to add cookie, if it exists
+//        URL urlObj = null;
+//        try {
+//          urlObj = new URL(url);
+//          String baseUrl = urlObj.getProtocol() + "://" + urlObj.getHost();
+//          String cookie = CookieManager.getInstance().getCookie(baseUrl);
+//          request.addRequestHeader("Cookie", cookie);
+//        } catch (MalformedURLException e) {
+//          System.out.println("Error getting cookie for DownloadManager: " + e.toString());
+//          e.printStackTrace();
+//        }
+//
+//        //Finish setting up request
+//        request.addRequestHeader("User-Agent", userAgent);
+//        request.setTitle(fileName);
+//        request.setDescription(downloadMessage);
+//        request.allowScanningByMediaScanner();
+//        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+//        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+//
+//        module.setDownloadRequest(request);
+//
+//        if (module.grantFileDownloaderPermissions()) {
+//          module.downloadFile();
+//        }
       }
     });
 
