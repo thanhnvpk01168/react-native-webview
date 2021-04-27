@@ -96,7 +96,7 @@ public class JavaScriptInterface {
         NotificationCompat.Builder b = new NotificationCompat.Builder(context, CHANNEL_ID)
           .setDefaults(NotificationCompat.DEFAULT_ALL)
           .setWhen(System.currentTimeMillis())
-          .setSmallIcon(R.mipmap.ic_launcher_round)
+          .setSmallIcon(android.R.drawable.stat_sys_download_done)
           //.setContentIntent(pendingIntent)
           .setContentTitle("Rce_PDF_" + currentDateTime + ".pdf")
           .setContentText("Download complete");
