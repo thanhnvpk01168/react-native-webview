@@ -45,6 +45,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.util.Pair;
@@ -193,6 +194,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     settings.setDomStorageEnabled(true);
     settings.setSupportMultipleWindows(true);
 
+    ActivityCompat.requestPermissions((reactContext.getCurrentActivity()), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+
     settings.setAllowFileAccess(true);
     settings.setAllowContentAccess(true);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
@@ -212,7 +215,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     webView.addJavascriptInterface(new JavaScriptInterface(reactContext), "Android");
     webView.setDownloadListener(new DownloadListener() {
       public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
-        Toast.makeText(reactContext, "download", Toast.LENGTH_SHORT).show();
+        Toast.makeText(reactContext, "Download", Toast.LENGTH_SHORT).show();
        // String base64Blob = JavaScriptInterface.getBase64StringFromBlobUrl(url);
         webView.loadUrl(JavaScriptInterface.getBase64StringFromBlobUrl(url));
         //Toast.makeText(reactContext, base64Blob, Toast.LENGTH_SHORT).show();
